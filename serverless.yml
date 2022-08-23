@@ -1,0 +1,40 @@
+service: webtoonguru-thumbnail-modifier-jjy
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.8
+  region: ap-northeast-2
+  apiName: webtoonguru-thumbnail-modifier-jjy
+  endpointType: EDGE
+  apiGateway:
+    binaryMediaTypes:
+      - "*/*"
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+          Resource: 'arn:aws:s3:::webtoonguru-thumbnail-jjy/*'
+
+functions:
+  hello:
+    handler: handler.hello
+    events:
+      - http:
+          path: /
+          method: get
+
+custom:
+  pythonRequirements:
+    dockerizePip: "non-linux"
+  customDomain:
+    domainName: thumbnail.webtoon.guru
+    basePath: ''
+    # stage: ${self:provider.stage}
+    createRoute53Record: true
+
+plugins:
+  - serverless-python-requirements
+  - serverless-domain-manager
