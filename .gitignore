@@ -15,6 +15,9 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+.env
+
+venv-webtoonguru-tm/
 
 # Serverless directories
 .serverless

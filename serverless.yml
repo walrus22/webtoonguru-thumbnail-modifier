@@ -34,7 +34,18 @@ custom:
     basePath: ''
     # stage: ${self:provider.stage}
     createRoute53Record: true
+  serverless-offline:
+    # httpsProtocol: "dev-certs"
+    httpPort: 6000
+    # stageVariables:
+    #   foo: "bar"
+  # serverless-offline-watcher:
+  #   - path: handler.py
+  #     command: sls offline end
+  #     # command: echo "changed"
 
 plugins:
+  - serverless-offline
+  # - serverless-offline-watcher
   - serverless-python-requirements
   - serverless-domain-manager
