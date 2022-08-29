@@ -5,13 +5,47 @@ from PIL import Image
 from io import BytesIO
 import os
 import re
+from collections import Counter
 
-def hello(event, context):
+def trim_side_background(img):
+    dominant_color = Counter(list(img.getdata())).most_common(1)[0][0]
+    pix = img.load()
+    meaningful_zone_borders = []
+    is_meaningful_zone = False
+
+    for x in range(img.size[0]):
+        for y in range(img.size[1]):
+            if pix[x,y] != dominant_color:
+                if is_meaningful_zone == False: # zone start
+                    is_meaningful_zone = True
+                    meaningful_zone_borders.append(x) 
+                break # if already in zone, skip
+            elif y == img.size[1]-1: # all pix[x,y] == dominant column
+                if is_meaningful_zone == True:
+                    meaningful_zone_borders.append(x-1) 
+                is_meaningful_zone = False
+            
+    if len(meaningful_zone_borders)%2 == 1: # last column 
+        meaningful_zone_borders.append(img.size[1])
+
+    max = 0
+    for i in range(len(meaningful_zone_borders)):
+        if i == len(meaningful_zone_borders)-1:
+            break
+        if max <= meaningful_zone_borders[i+1] - meaningful_zone_borders[i]:
+            max = meaningful_zone_borders[i+1] - meaningful_zone_borders[i]
+            meaningful_start = meaningful_zone_borders[i]
+            meaningful_end = meaningful_zone_borders[i+1]
+            
+    return img.crop((meaningful_start, 0, meaningful_start+meaningful_end, img.size[1]))
+
+def modifier(event, context):
     try : 
         validURL='^https://.*\.webtoon.guru/.*'
+        referer = event.get('headers').get('Referer')
         
-        if True :
-        # if event.get('headers').get('Referer') and re.search(validURL, event.get('headers').get('Referer')) :
+        # if True :
+        if referer and (re.search(validURL, referer) or re.search('https://webtoon.guru/.*', referer)):
             s3 = boto3.client('s3')
             query = event.get('queryStringParameters')
             S3_KEY = query.get('key')
@@ -23,23 +57,27 @@ def hello(event, context):
             )
             img_body = response['Body'].read()
             img = Image.open(BytesIO(img_body))
-            originalWidth, originalHeight = img.size
-            # print(img.size)
             # img.show()
-            
-                                    
-            
+            # desire_size = {'width': int(query.get('width', original_size['width'])), 'height': int(query.get('height', original_size['height']))}
+            if query.get('trim') == 'true':
+                img = trim_side_background(img)
+                
             imgFormat = query.get('format', "webp")
-            width = int(query.get('width', originalWidth))
-            height = int(query.get('height', originalHeight))
+            original_size = {'width' : img.size[0], 'height': img.size[1]}
+            desire_size = {'width': int(query.get('width', original_size['width'])), 'height': int(query.get('height', original_size['height']))}
             
-            img = img.crop(((originalWidth-width)/2, (originalHeight-height)/2, (originalWidth+width)/2, (originalHeight+height)/2))
+            long_aspect='width' if desire_size['width']/original_size['width'] > desire_size['height']/original_size['height'] else 'height'
+            resize_ratio = desire_size[long_aspect] / original_size[long_aspect]
+            img = img.resize((round(original_size['width'] * resize_ratio), round(original_size['height'] * resize_ratio)))
+            img = img.crop(((img.size[0]-desire_size['width'])/2, (img.size[1]-desire_size['height'])/2, (img.size[0]+desire_size['width'])/2, (img.size[1]+desire_size['height'])/2)) 
+            
             buffer = BytesIO()
             img.save(buffer, imgFormat)
             return {
                 'headers': { 
                     "Content-Type": "image/" + imgFormat,
                     "Access-Control-Allow-Origin" : "*",
+                    "Access-Control-Allow-Credentials" : True,
                 },
                 'statusCode': 200,
                 'body': base64.b64encode(buffer.getvalue()),
@@ -50,9 +88,10 @@ def hello(event, context):
             return {
                 'headers': {
                     "Access-Control-Allow-Origin" : "*",
+                    "Access-Control-Allow-Credentials" : True,
                 },
                 "statusCode": 403,
-                'body' : json.dumps(event['headers']),            
+                'body' : json.dumps(event),            
             }
                 
     except Exception as e:

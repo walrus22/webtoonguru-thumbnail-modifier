@@ -1,5 +1,9 @@
 service: webtoonguru-thumbnail-modifier-jjy
 frameworkVersion: '3'
+package:
+  exclude:
+    - node_modules/**
+    - venv/**
 
 provider:
   name: aws
@@ -20,11 +24,19 @@ provider:
 
 functions:
   hello:
-    handler: handler.hello
+    handler: handler.modifier
     events:
       - http:
           path: /
           method: get
+  refererCheck:
+    handler: referer_check.referer_check
+    events:
+      - http:
+          path: /
+          method: post
+
+
 
 custom:
   pythonRequirements:
