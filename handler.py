@@ -3,9 +3,17 @@ import boto3
 import base64
 from PIL import Image
 from io import BytesIO
-import os
 import re
 from collections import Counter
+
+def is_meaningful_pix(pix, dominant_color):
+    for i in range(len(pix)):
+        diff = abs(pix[i] - dominant_color[i]) / 255
+        if diff <= 30/255:
+            continue
+        else : 
+            return True
+    return False
 
 def trim_side_background(img):
     dominant_color = Counter(list(img.getdata())).most_common(1)[0][0]
@@ -15,7 +23,9 @@ def trim_side_background(img):
 
     for x in range(img.size[0]):
         for y in range(img.size[1]):
-            if pix[x,y] != dominant_color:
+            
+            # if pix[x,y] != dominant_color:
+            if is_meaningful_pix(pix[x,y], dominant_color):
                 if is_meaningful_zone == False: # zone start
                     is_meaningful_zone = True
                     meaningful_zone_borders.append(x) 
@@ -37,9 +47,10 @@ def trim_side_background(img):
             meaningful_start = meaningful_zone_borders[i]
             meaningful_end = meaningful_zone_borders[i+1]
             
-    return img.crop((meaningful_start, 0, meaningful_start+meaningful_end, img.size[1]))
+    img =  img.crop((meaningful_start, 0, meaningful_end, img.size[1]))
+    return img
 
-def modifier(event, context):
+def thumbnail_modifier(event, context):
     try : 
         validURL='^https://.*\.webtoon.guru/.*'
         referer = event.get('headers').get('Referer')
@@ -57,8 +68,6 @@ def modifier(event, context):
             )
             img_body = response['Body'].read()
             img = Image.open(BytesIO(img_body))
-            # img.show()
-            # desire_size = {'width': int(query.get('width', original_size['width'])), 'height': int(query.get('height', original_size['height']))}
             if query.get('trim') == 'true':
                 img = trim_side_background(img)
                 

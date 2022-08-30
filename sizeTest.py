@@ -9,6 +9,17 @@ import cv2
 from collections import Counter
 
 
+def is_meaningful_pix(pix, dominant_color):
+    # print(pix)
+    # print(dominant_color)
+    for i in range(len(pix)):
+        diff = abs(pix[i] - dominant_color[i]) / 255
+        # print(diff)
+        if diff <= 30/255: # 표준분포 같은 걸 사용해도 유의미할듯
+            continue
+        else : 
+            return True
+    return False
 
 def trim_side_background(img):
     dominant_color = Counter(list(img.getdata())).most_common(1)[0][0]
@@ -18,7 +29,7 @@ def trim_side_background(img):
 
     for x in range(img.size[0]):
         for y in range(img.size[1]):
-            if pix[x,y] != dominant_color:
+            if is_meaningful_pix(pix[x,y], dominant_color):
                 if is_meaningful_zone == False: # zone start
                     is_meaningful_zone = True
                     meaningful_zone_borders.append(x) 
@@ -40,7 +51,11 @@ def trim_side_background(img):
             meaningful_start = meaningful_zone_borders[i]
             meaningful_end = meaningful_zone_borders[i+1]
     
-    img =  img.crop((meaningful_start, 0, meaningful_start + meaningful_end, img.size[1]))
+    print(meaningful_start)
+    print(meaningful_end)
+    
+    img =  img.crop((meaningful_start, 0, meaningful_end, img.size[1]))
+    print(meaningful_zone_borders)    
     return img
 
 """
@@ -66,9 +81,10 @@ none: 114kb, LANCZOS: 120kb, BICUBIC: 114kb
 """
 
 s3 = boto3.client('s3')
-# S3_KEY = '630874d3eee3e62099050604' ## 신마 [스크롤]
+S3_KEY = '6308768deee3e62099051db9' 
 # S3_KEY = '630874f3eee3e62099050785' ## 어쩌다 생각나는 이야기
-S3_KEY = '63087489eee3e620990502ae' 
+# S3_KEY = '630874dbeee3e6209905065f'   
+# S3_KEY = '630874f9eee3e620990507be' 
 S3_BUCKET_NAME = 'webtoonguru-thumbnail-jjy'
 
 response = s3.get_object(
@@ -78,7 +94,8 @@ response = s3.get_object(
 img_body = response['Body'].read()
     
 img = Image.open(BytesIO(img_body))
-img = trim_side_background(img)
+# img.show()
+# img = trim_side_background(img)
 img.show()
 
 # img = Image.open('/Users/kss/Documents/GitHub/webtoonguru-thumbnail-modifier-jjy/imgTest/portrait_size.jpeg')
@@ -86,15 +103,15 @@ img.show()
 # img = Image.open('/Users/kss/Documents/GitHub/webtoonguru-thumbnail-modifier-jjy/imgTest/detail_original.jpg')
 # original_size = {'width' : 1000, 'height': 600}
 
-original_size = {'width' : img.size[0], 'height': img.size[1]}
-desire_size = {'width': 80, 'height': 80}
-long_aspect='width' if desire_size['width']/original_size['width'] > desire_size['height']/original_size['height'] else 'height'
-resize_ratio = desire_size[long_aspect] / original_size[long_aspect]
+# original_size = {'width' : img.size[0], 'height': img.size[1]}
+# desire_size = {'width': 80, 'height': 80}
+# long_aspect='width' if desire_size['width']/original_size['width'] > desire_size['height']/original_size['height'] else 'height'
+# resize_ratio = desire_size[long_aspect] / original_size[long_aspect]
 
-img = img.resize((round(original_size['width'] * resize_ratio), round(original_size['height'] * resize_ratio)))
-img.show()
-img = img.crop(((img.size[0]-desire_size['width'])/2, (img.size[1]-desire_size['height'])/2, (img.size[0]+desire_size['width'])/2, (img.size[1]+desire_size['height'])/2)) # center crop
-img.show()
+# img = img.resize((round(original_size['width'] * resize_ratio), round(original_size['height'] * resize_ratio)))
+# img.show()
+# img = img.crop(((img.size[0]-desire_size['width'])/2, (img.size[1]-desire_size['height'])/2, (img.size[0]+desire_size['width'])/2, (img.size[1]+desire_size['height'])/2)) # center crop
+# img.show()
 
 
 

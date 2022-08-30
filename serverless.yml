@@ -23,8 +23,8 @@ provider:
           Resource: 'arn:aws:s3:::webtoonguru-thumbnail-jjy/*'
 
 functions:
-  hello:
-    handler: handler.modifier
+  thumbnailModifier:
+    handler: handler.thumbnail_modifier
     events:
       - http:
           path: /
@@ -44,8 +44,8 @@ custom:
   customDomain:
     domainName: thumbnail.webtoon.guru
     basePath: ''
-    # stage: ${self:provider.stage}
     createRoute53Record: true
+    # stage: ${self:provider.stage}
   serverless-offline:
     # httpsProtocol: "dev-certs"
     httpPort: 6000
