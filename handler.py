@@ -55,8 +55,8 @@ def thumbnail_modifier(event, context):
         validURL='^https://.*\.webtoon.guru/.*'
         referer = event.get('headers').get('Referer')
         
-        # if True :
-        if referer and (re.search(validURL, referer) or re.search('https://webtoon.guru/.*', referer)):
+        if True :
+        # if referer and (re.search(validURL, referer) or re.search('https://webtoon.guru/.*', referer)):
             s3 = boto3.client('s3')
             query = event.get('queryStringParameters')
             S3_KEY = query.get('key')
